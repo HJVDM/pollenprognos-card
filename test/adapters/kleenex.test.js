@@ -162,12 +162,12 @@ describe("Kleenex adapter: basic shape", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. PPM to level (0-4) conversion using category-specific thresholds
+// 2. PPM to level (0-4) conversion using Dutch standard thresholds
 // ---------------------------------------------------------------------------
 describe("Kleenex adapter: PPM to level conversion", () => {
-  // Trees thresholds: [95, 207, 703]
-  // 0 -> 0, 1-95 -> 1, 96-207 -> 2, 208-703 -> 3, >703 -> 4
-  it("maps 0 PPM to level 0 for trees allergens", async () => {
+  // Dutch standard thresholds (uniform across all allergen categories):
+  // 0 -> 0, 1-29 -> 1 (Laag), 30-69 -> 2 (Matig), 70-150 -> 3 (Hoog), >150 -> 4 (Zeer hoog)
+  it("maps 0 PPM to level 0", async () => {
     const entity = makeKleenexEntity(
       "amsterdam", "trees", 0,
       [{ name: "Birch", value: 0 }],
@@ -184,10 +184,10 @@ describe("Kleenex adapter: PPM to level conversion", () => {
     expect(result[0].day0.state).toBe(0);
   });
 
-  it("maps trees PPM within low threshold (<=95) to level 1", async () => {
+  it("maps PPM within Laag threshold (<30) to level 1", async () => {
     const entity = makeKleenexEntity(
-      "amsterdam", "trees", 95,
-      [{ name: "Birch", value: 95 }],
+      "amsterdam", "trees", 20,
+      [{ name: "Birch", value: 20 }],
     );
     const hass = makeHassFromEntities([entity]);
     const config = makeConfig({
@@ -201,10 +201,10 @@ describe("Kleenex adapter: PPM to level conversion", () => {
     expect(result[0].day0.state).toBe(1);
   });
 
-  it("maps trees PPM within moderate threshold (96-207) to level 2", async () => {
+  it("maps PPM within Matig threshold (30-69) to level 2", async () => {
     const entity = makeKleenexEntity(
-      "amsterdam", "trees", 200,
-      [{ name: "Birch", value: 200 }],
+      "amsterdam", "trees", 50,
+      [{ name: "Birch", value: 50 }],
     );
     const hass = makeHassFromEntities([entity]);
     const config = makeConfig({
@@ -218,10 +218,10 @@ describe("Kleenex adapter: PPM to level conversion", () => {
     expect(result[0].day0.state).toBe(2);
   });
 
-  it("maps trees PPM within high threshold (208-703) to level 3", async () => {
+  it("maps PPM within Hoog threshold (70-150) to level 3", async () => {
     const entity = makeKleenexEntity(
-      "amsterdam", "trees", 703,
-      [{ name: "Birch", value: 703 }],
+      "amsterdam", "trees", 100,
+      [{ name: "Birch", value: 100 }],
     );
     const hass = makeHassFromEntities([entity]);
     const config = makeConfig({
@@ -235,10 +235,27 @@ describe("Kleenex adapter: PPM to level conversion", () => {
     expect(result[0].day0.state).toBe(3);
   });
 
-  it("maps trees PPM above high threshold (>703) to level 4", async () => {
+  it("maps 150 PPM (upper boundary of Hoog) to level 3", async () => {
     const entity = makeKleenexEntity(
-      "amsterdam", "trees", 1000,
-      [{ name: "Birch", value: 1000 }],
+      "amsterdam", "trees", 150,
+      [{ name: "Birch", value: 150 }],
+    );
+    const hass = makeHassFromEntities([entity]);
+    const config = makeConfig({
+      location: "amsterdam",
+      allergens: ["birch"],
+      pollen_threshold: 0,
+    });
+
+    const result = await fetchForecast(hass, config);
+
+    expect(result[0].day0.state).toBe(3);
+  });
+
+  it("maps PPM above 150 (Zeer hoog) to level 4", async () => {
+    const entity = makeKleenexEntity(
+      "amsterdam", "trees", 200,
+      [{ name: "Birch", value: 200 }],
     );
     const hass = makeHassFromEntities([entity]);
     const config = makeConfig({
@@ -252,8 +269,7 @@ describe("Kleenex adapter: PPM to level conversion", () => {
     expect(result[0].day0.state).toBe(4);
   });
 
-  // Grass thresholds: [29, 60, 341]
-  it("applies grass-specific thresholds: 30 PPM -> level 2", async () => {
+  it("applies uniform threshold: 30 PPM for grass -> level 2 (Matig)", async () => {
     const entity = makeKleenexEntity(
       "amsterdam", "grass", 30,
       [{ name: "Grass", value: 30 }],
@@ -267,12 +283,11 @@ describe("Kleenex adapter: PPM to level conversion", () => {
 
     const result = await fetchForecast(hass, config);
 
-    // 30 > 29 (low threshold) so level 2 (moderate)
+    // 30 >= 30 (Matig threshold) so level 2
     expect(result[0].day0.state).toBe(2);
   });
 
-  // Weeds thresholds: [20, 77, 266]
-  it("applies weeds-specific thresholds: 15 PPM -> level 1", async () => {
+  it("applies uniform threshold: 15 PPM for weeds -> level 1 (Laag)", async () => {
     const entity = makeKleenexEntity(
       "amsterdam", "weeds", 15,
       [{ name: "Ragweed", value: 15 }],
@@ -286,7 +301,7 @@ describe("Kleenex adapter: PPM to level conversion", () => {
 
     const result = await fetchForecast(hass, config);
 
-    // 15 <= 20 (low threshold) so level 1
+    // 15 < 30 (Laag threshold) so level 1
     expect(result[0].day0.state).toBe(1);
   });
 
@@ -340,12 +355,13 @@ describe("Kleenex adapter: level scaling (0-4 to 0-6)", () => {
   // 0 -> 0, 1 -> 1, 2 -> 3, 3 -> 5, 4 -> 6
 
   const scalingCases = [
-    // [ppmForBirch, expectedRawLevel, expectedScaledStateText]
+    // [ppmForBirch, expectedRawLevel]
     // We test that state (raw) and state_text (scaled) are consistent.
+    // Dutch thresholds: <30 -> 1, 30-69 -> 2, 70-150 -> 3, >150 -> 4
     [0, 0],    // raw 0 -> scaled 0
-    [50, 1],   // raw 1 (<=95) -> scaled 1
-    [150, 2],  // raw 2 (96-207) -> scaled 3
-    [500, 3],  // raw 3 (208-703) -> scaled 5
+    [20, 1],   // raw 1 (Laag, <30) -> scaled 1
+    [50, 2],   // raw 2 (Matig, 30-69) -> scaled 3
+    [100, 3],  // raw 3 (Hoog, 70-150) -> scaled 5
     [1000, 4], // raw 4 (>703) -> scaled 6
   ];
 
@@ -391,6 +407,26 @@ describe("Kleenex adapter: level scaling (0-4 to 0-6)", () => {
     const resultLow = await fetchForecast(hassLow, config);
 
     expect(resultHigh[0].day0.state_text).not.toBe(resultLow[0].day0.state_text);
+  });
+
+  it("sets display_state to the raw ppm value so show_value_numeric shows ppm", async () => {
+    const ppm = 45;
+    const entity = makeKleenexEntity(
+      "amsterdam", "trees", ppm,
+      [{ name: "Birch", value: ppm }],
+    );
+    const hass = makeHassFromEntities([entity]);
+    const config = makeConfig({
+      location: "amsterdam",
+      allergens: ["birch"],
+      pollen_threshold: 0,
+    });
+
+    const result = await fetchForecast(hass, config);
+
+    // display_state should be the actual ppm, not the abstract level
+    expect(result[0].day0.display_state).toBe(ppm);
+    expect(result[0].day0.state).toBe(2); // 45 ppm => Matig => level 2
   });
 });
 

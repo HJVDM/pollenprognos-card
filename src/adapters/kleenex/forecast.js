@@ -743,6 +743,7 @@ export async function fetchForecast(hass, config) {
           name: dict.allergenCapitalized,
           day: dayLabel,
           state: level, // Raw level for sorting and threshold checking
+          display_state: dayData.value >= 0 ? dayData.value : level, // Actual ppm for show_value_numeric
           state_text:
             scaledLevel < 0
               ? noInfoLabel
