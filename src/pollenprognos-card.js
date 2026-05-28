@@ -1950,7 +1950,7 @@ class PollenPrognosCard extends LitElement {
               }
             }
             const levelForColor =
-              this.config.integration === "plu"
+              this.config.integration === "plu" || this.config.integration === "kleenex"
                 ? sensor.day0?.state ?? 0
                 : sensor.day0?.display_state ?? sensor.day0?.state ?? 0;
             return html`
@@ -2156,7 +2156,7 @@ class PollenPrognosCard extends LitElement {
                   <td>
                     ${this._renderAllergenSvg(
                       this._getSvgKey(sensor.allergenReplaced),
-                      this.config.integration === "plu"
+                      this.config.integration === "plu" || this.config.integration === "kleenex"
                         ? sensor.days[0]?.state ?? 0
                         : sensor.days[0]?.display_state ?? sensor.days[0]?.state ?? 0,
                       {

@@ -23874,7 +23874,7 @@ class Gm extends sr {
       return;
     }
     this._userConfig = { ...r }, this.config = a, !this._versionLogged && this.config.show_version !== !1 && (console.info(
-      "%c🤧 Pollenprognos Card: version v3.2.0",
+      "%c🤧 Pollenprognos Card: version v3.1.0-nl",
       "background:#f0e68c;color:#000;padding:2px 4px;border-radius:2px;"
     ), this._versionLogged = !0), this._initDone = !1, this._hass && (this.hass = this._hass);
   }
@@ -24333,7 +24333,7 @@ class Gm extends sr {
       const n = ((_ = s.day0) == null ? void 0 : _.state_text) ?? "", a = ((g = s.day0) == null ? void 0 : g.display_state) ?? ((p = s.day0) == null ? void 0 : p.state), l = a != null && a >= 0 ? a : "";
       let d = "";
       (m = this.config) != null && m.show_text_allergen && (d += (x = this.config) != null && x.allergens_abbreviated ? s.allergenShort ?? "" : s.allergenCapitalized ?? ""), (v = this.config) != null && v.show_value_text && ((f = this.config) != null && f.show_value_numeric) ? (d && (d += ": "), d += l !== "" ? `${n} (${l})` : n) : (P = this.config) != null && P.show_value_text ? (d && (d += ": "), d += n) : (k = this.config) != null && k.show_value_numeric && l !== "" && (d && (d += " "), d += `(${l})`);
-      const c = this.config.integration === "plu" ? ((A = s.day0) == null ? void 0 : A.state) ?? 0 : ((M = s.day0) == null ? void 0 : M.display_state) ?? ((E = s.day0) == null ? void 0 : E.state) ?? 0;
+      const c = this.config.integration === "plu" || this.config.integration === "kleenex" ? ((A = s.day0) == null ? void 0 : A.state) ?? 0 : ((M = s.day0) == null ? void 0 : M.display_state) ?? ((E = s.day0) == null ? void 0 : E.state) ?? 0;
       return U`
               <div class="sensor minimal">
                 ${this._renderAllergenSvg(
@@ -24461,7 +24461,7 @@ class Gm extends sr {
                   <td>
                     ${this._renderAllergenSvg(
           this._getSvgKey(f.allergenReplaced),
-          this.config.integration === "plu" ? ((M = f.days[0]) == null ? void 0 : M.state) ?? 0 : ((E = f.days[0]) == null ? void 0 : E.display_state) ?? ((R = f.days[0]) == null ? void 0 : R.state) ?? 0,
+          this.config.integration === "plu" || this.config.integration === "kleenex" ? ((M = f.days[0]) == null ? void 0 : M.state) ?? 0 : ((E = f.days[0]) == null ? void 0 : E.display_state) ?? ((R = f.days[0]) == null ? void 0 : R.state) ?? 0,
           {
             clickable: this.config.link_to_sensors !== !1 && f.entity_id,
             onClick: (I) => {
@@ -27347,7 +27347,7 @@ class Vm extends sr {
             ></ha-switch>
           </ha-formfield>
           <div class="version-info">
-            ${this._t("card_version")}: ${"v3.2.0"}
+            ${this._t("card_version")}: ${"v3.1.0-nl"}
           </div>
         </details>
       </div>
